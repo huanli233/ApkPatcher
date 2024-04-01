@@ -32,7 +32,7 @@ jobs:
     - name: Archive production artifacts
       uses: actions/upload-artifact@v4.3.1
       with:
-        name: ApkPatcher
+        name: ApkPatcher-Linux
         path: |
           target/*.jar
           target/*.zip
@@ -53,7 +53,7 @@ jobs:
     - name: Archive production artifacts
       uses: actions/upload-artifact@v4.3.1
       with:
-        name: ApkPatcher
+        name: ApkPatcher-Windows
         path: |
           target/*.jar
           target/*.zip
