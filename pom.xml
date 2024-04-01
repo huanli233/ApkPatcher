@@ -5,6 +5,46 @@
   <version>1.0.0</version>
   <name>ApkPatcher</name>
   
+  <repositories>
+        <repository>
+            <id>ali-maven</id>
+            <url>http://maven.aliyun.com/nexus/content/groups/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+                <checksumPolicy>fail</checksumPolicy>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>repo.maven.apache.org</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+                <checksumPolicy>fail</checksumPolicy>
+            </snapshots>
+        </repository>
+  		<repository>
+            <id>google</id>
+            <url>https://dl.google.com/dl/android/maven2/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+                <checksumPolicy>fail</checksumPolicy>
+            </snapshots>
+        </repository>
+    </repositories>
+
+  
   <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>17</maven.compiler.source>
@@ -19,9 +59,9 @@
   		<version>2.9.3</version>
   	</dependency>
   	<dependency>
-  		<groupId>org.smali</groupId>
-  		<artifactId>dexlib2</artifactId>
-  		<version>2.5.2</version>
+  		<groupId>com.android.tools.smali</groupId>
+  		<artifactId>smali-dexlib2</artifactId>
+  		<version>3.0.3</version>
   	</dependency>
   	<dependency>
   		<groupId>com.github.lanchon.dexpatcher</groupId>
