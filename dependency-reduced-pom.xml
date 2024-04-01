@@ -44,13 +44,14 @@
         <version>1.7.2</version>
         <executions>
           <execution>
-            <id>bundling-for-windows</id>
+            <id>bundling</id>
             <phase>package</phase>
             <goals>
               <goal>package</goal>
             </goals>
             <configuration>
               <platform>windows</platform>
+              <platform>linux</platform>
               <createZipball>true</createZipball>
               <vmArgs>-XX:+UseZGC -Dfile.encoding=UTF-8</vmArgs>
               <winConfig>
@@ -62,7 +63,6 @@
           </execution>
         </executions>
         <configuration>
-          <packagingJdk>C:\Program Files\Java\jdk-17.0.2</packagingJdk>
           <name>apkpatcher</name>
           <bundleJre>true</bundleJre>
           <mainClass>${mainClass}</mainClass>
@@ -72,6 +72,35 @@
       </plugin>
     </plugins>
   </build>
+  <repositories>
+    <repository>
+      <releases />
+      <snapshots>
+        <updatePolicy>always</updatePolicy>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
+      <id>ali-maven</id>
+      <url>http://maven.aliyun.com/nexus/content/groups/public</url>
+    </repository>
+    <repository>
+      <releases />
+      <snapshots>
+        <updatePolicy>always</updatePolicy>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
+      <id>repo.maven.apache.org</id>
+      <url>https://repo.maven.apache.org/maven2</url>
+    </repository>
+    <repository>
+      <releases />
+      <snapshots>
+        <updatePolicy>always</updatePolicy>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
+      <id>google</id>
+      <url>https://dl.google.com/dl/android/maven2/</url>
+    </repository>
+  </repositories>
   <properties>
     <maven.compiler.target>17</maven.compiler.target>
     <mainClass>com.huanli233.apkpatcher.main.Main</mainClass>

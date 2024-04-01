@@ -117,13 +117,14 @@
         </configuration>
         <executions>
             <execution>
-                <id>bundling-for-windows</id>
+                <id>bundling</id>
                 <phase>package</phase>
                 <goals>
                     <goal>package</goal>
                 </goals>
                 <configuration>
                     <platform>windows</platform>
+                    <platform>linux</platform>
                     <createZipball>true</createZipball>
                     <vmArgs>-XX:+UseZGC -Dfile.encoding=UTF-8</vmArgs>
                     <winConfig>
