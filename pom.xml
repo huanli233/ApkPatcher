@@ -123,8 +123,7 @@
                     <goal>package</goal>
                 </goals>
                 <configuration>
-                    <platform>windows</platform>
-                    <platform>linux</platform>
+                    <platform>auto</platform>
                     <createZipball>true</createZipball>
                     <vmArgs>-XX:+UseZGC -Dfile.encoding=UTF-8</vmArgs>
                     <winConfig>
