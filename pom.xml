@@ -5,6 +5,13 @@
   <version>1.0.0</version>
   <name>ApkPatcher</name>
   
+  <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <mainClass>com.huanli233.apkpatcher.main.Main</mainClass>
+  </properties>
+  
   <dependencies>
   	<dependency>
   		<groupId>org.apktool</groupId>
@@ -22,4 +29,73 @@
   		<version>2.3.4.r2</version>
   	</dependency>
   </dependencies>
+  
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.2.4</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>${mainClass}</mainClass>
+                </transformer>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/MANIFEST.MF</exclude>
+                    <exclude>META-INF/LICENSE.txt</exclude>
+                    <exclude>META-INF/NOTICE.txt</exclude>
+                    <exclude>META-INF/LICENSE</exclude>
+                    <exclude>META-INF/NOTICE</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>io.github.fvarrui</groupId>
+        <artifactId>javapackager</artifactId>
+        <version>1.7.2</version>
+        <configuration>
+        	<packagingJdk>C:\Program Files\Java\jdk-17.0.2</packagingJdk>
+            <name>apkpatcher</name>
+            <bundleJre>true</bundleJre>
+            <mainClass>${mainClass}</mainClass>
+            <generateInstaller>false</generateInstaller>
+            <copyDependencies>true</copyDependencies>
+        </configuration>
+        <executions>
+            <execution>
+                <id>bundling-for-windows</id>
+                <phase>package</phase>
+                <goals>
+                    <goal>package</goal>
+                </goals>
+                <configuration>
+                    <platform>windows</platform>
+                    <createZipball>true</createZipball>
+                    <vmArgs>-XX:+UseZGC -Dfile.encoding=UTF-8</vmArgs>
+                    <winConfig>
+		                <generateMsi>false</generateMsi>
+		                <generateMsm>false</generateMsm>
+            			<headerType>console</headerType>
+                    </winConfig>
+                </configuration>
+            </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>
