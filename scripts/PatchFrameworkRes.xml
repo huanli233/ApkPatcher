@@ -1,0 +1,3 @@
+<apkpatch>
+	<resource><patch type="xml" path="res/values/bools.xml">
+				<bool name="config_supportAutoRotation">true</bool></patch></resource></apkpatch>
