@@ -11,3 +11,12 @@ apkpatcher <Script> <APKFile>
 ```
 scripts/PatchFrameworkRes.xml
 ```
+
+# TODO
+- [ ] **Resource**
+    - [x] XML patch
+        - [ ] Replace existing child nodes(likes Magisk's mount file)
+    - [ ] Replace file
+- [ ] **Dex**
+    - [ ] Find method and replace
+        - [ ] Find class with SourceFile
