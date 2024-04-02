@@ -11,12 +11,22 @@ apkpatcher <Script> <APKFile>
 ```
 scripts/PatchFrameworkRes.xml
 ```
+修补小天才桌面去除上课禁用:
+```
+scripts/DisableLauncherRunMode.xml
+```
+修补小天才桌面去除非法安装:
+```
+scripts/RemoveIllegalApp.xml
+```
 
 # TODO
 - [ ] **Resource**
     - [x] XML patch
         - [ ] Replace existing child nodes(likes Magisk's mount file)
-    - [ ] Replace file
-- [ ] **Dex**
-    - [ ] Find method and replace
-        - [ ] Find class with SourceFile
+    - [x] Replace file
+- [x] **Dex**
+    - [x] Find method and replace
+        - [x] Find class with SourceFile
+- [ ] **Script**
+    - [ ] Multi script

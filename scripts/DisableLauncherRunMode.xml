@@ -1,0 +1,4 @@
+<apkpatcher>
+	<dex>
+		<class type="precise" find="com.xtc.initservice.other.mode.ModeManager">
+			<patch patchtype="RETURN-VOID" type="precise" find="runTargetModeInThread;Z;V;false"></patch></class></dex></apkpatcher>

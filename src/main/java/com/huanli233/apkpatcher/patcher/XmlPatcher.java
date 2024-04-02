@@ -78,19 +78,54 @@ public class XmlPatcher {
     	// 导入新Element对象到当前文档中
         Node importedNode = doc.importNode(newElement, true);
         NodeList nodeList = doc.getElementsByTagName(newElement.getTagName());
-        // 遍历相同节点名称的所有节点
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            Node existingNode = nodeList.item(i);
-            // 检查属性和子节点是否相同
-            if (nodeMatches(existingNode, newElement)) {
-                // 替换相同节点
-                existingNode.getParentNode().replaceChild(importedNode, existingNode);
-                return;
+        if (mode == MODE_FULL_REPLACE) {
+        	// 遍历相同节点名称的所有节点
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                Node existingNode = nodeList.item(i);
+                // 检查属性和子节点是否相同
+                if (nodeMatches(existingNode, newElement)) {
+                    // 替换相同节点
+                    existingNode.getParentNode().replaceChild(importedNode, existingNode);
+                    return;
+                }
             }
-        }
+		} else if (mode == MODE_REPLACE_EXISTS) {
+//			Node curXmlFile = doc.getDocumentElement();
+//			Element curNew = newElement;
+//			boolean flag = true;
+//			while (flag) {
+//				NodeList list = curXmlFile.getChildNodes();
+//				for (int i = 0; i < list.getLength(); i++) {
+//					Node node = list.item(i);
+//					if (nodeMatches(node, curNew)) {
+//						if (hasElementChild(curNew)) {
+//							curXmlFile = node;
+//							continue;
+//						} else {
+//							
+//						}
+//					}
+//				}
+//			}
+			// TODO
+			System.out.println("! REPLACE_EXISTS is not currently supported");
+			return;
+		}
         // 如果没有相同节点，则添加新节点到根节点下
         doc.getDocumentElement().appendChild(importedNode);
     }
+    
+    @SuppressWarnings("unused")
+	private static boolean hasElementChild(Node node) {
+		boolean result = false;
+		NodeList list = node.getChildNodes();
+		for (int i = 0; i < list.getLength(); i++) {
+			if (list.item(i) instanceof Element) {
+				result = true;
+			}
+		}
+		return result;
+	}
 
     private static boolean nodeMatches(Node node1, Node node2) {
         // 检查节点名称是否相同

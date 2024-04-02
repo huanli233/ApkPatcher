@@ -64,9 +64,9 @@
   		<version>3.0.3</version>
   	</dependency>
   	<dependency>
-  		<groupId>com.github.lanchon.dexpatcher</groupId>
+  		<groupId>com.huanli233</groupId>
   		<artifactId>multidexlib2</artifactId>
-  		<version>2.3.4.r2</version>
+  		<version>3.0.3.r2</version>
   	</dependency>
   </dependencies>
   
