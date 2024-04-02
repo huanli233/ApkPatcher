@@ -30,3 +30,5 @@ scripts/RemoveIllegalApp.xml
         - [x] Find class with SourceFile
 - [ ] **Script**
     - [ ] Multi script
+- [ ] **Other**
+    - [ ] Signing configs
