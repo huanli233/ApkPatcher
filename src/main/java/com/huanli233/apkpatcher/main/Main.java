@@ -324,8 +324,9 @@ public class Main {
 						}
 						String source = findSplit[0];
 						String suffix = findSplit[1];
+						boolean checksuffix = suffix.equals("0");
 						for (ClassDef classDef2 : classDefs) {
-							if (classDef2.getSourceFile().equals(source) && classDef2.getType().endsWith((suffix + ";"))) {
+							if (classDef2.getSourceFile().equals(source) && ((!checksuffix) || classDef2.getType().endsWith((suffix + ";")))) {
 								classDef = classDef2;
 							}
 						}
