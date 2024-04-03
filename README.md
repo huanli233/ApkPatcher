@@ -3,7 +3,12 @@
 
 # Usage
 ```
-apkpatcher <Script> <APKFile>
+apkpatcher <Script> <APK> [Sign Option]
+  Script - ApkPatcher Script File
+  APK - Input APK File
+  Signing Option:
+    remove - (Default)Do not retain the original signature
+    keep - Do not modify the original signature information
 ```
 
 # 一些示例 Script
