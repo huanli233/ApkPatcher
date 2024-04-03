@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.ErrorManager;
 import java.util.logging.Formatter;
@@ -52,7 +54,7 @@ import lanchon.multidexlib2.MultiDexIO;
 
 public class Main {
 	
-	public static final String VERSION = "1.1.0";
+	public static final String VERSION = "1.2.0";
 	
 	static MessageEventListener listener;
 	
@@ -75,14 +77,14 @@ public class Main {
 		listener = new MessageEventListener() {
 			public void onEvent(MessageEvent event) {
 				if (event.getLevel() == Level.INFO || (event.getLevel() == Level.WARNING && !event.getMessage().contains("properties"))) {
-					System.out.println(event.getMessage());
+					System.out.println("- Apktool: " + event.getMessage());
 				}
 			}
 		};
 		clean();
 		System.out.println(String.format("ApkPatcher v%s", VERSION));
 		System.out.println("https://github.com/huanli233/ApkPatcher");
-		if (args.length != 2) {
+		if (args.length != 2 && args.length != 3) {
 			printHelp();
 		} else {
 			new Main().run(args);
@@ -169,56 +171,147 @@ public class Main {
 	}
 
 	public static void printHelp() {
-		System.out.println("Usage: apkpatcher <Script> <APK>");
+		System.out.println("Usage: apkpatcher <Script> <APK> [Sign Option]");
 		System.out.println("  Script - ApkPatcher Script File");
 		System.out.println("  APK - Input APK File");
+		System.out.println("  Signing Option:");
+		System.out.println("    remove - (Default)Do not retain the original signature");
+		System.out.println("    keep - Do not modify the original signature information");
 	}
 	
 	public void run(String[] args) {
-		File scriptFile = new File(args[0]);
+		String[] scriptFiles = args[0].split(";");
 		File apkFile = new File(args[1]);
-		System.out.println("- Start check script");
-		if (!scriptFile.exists()) {
-			System.out.println("! Script file not exists");
-			return;
+		String signSetting = "remove";
+		if (args.length == 3) {
+			switch (args[2]) {
+			case "remove":
+				break;
+			case "keep":
+				signSetting = "keep";
+				break;
+			default:
+				System.out.println("! Unknown sign setting: " + args[2]);
+				return;
+			}
 		}
-		File scriptDir = scriptFile.getParentFile();
-		if (!scriptFile.isFile()) {
-			System.out.println("! Script file is not a file");
-			return;
-		}
-		Document document = null;
-		try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            factory.setValidating(false);
-            factory.setNamespaceAware(true);
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            document = builder.parse(scriptFile);
-        } catch (SAXException e) {
-            System.out.println("! Script file content if invalid: " + e.getMessage());
-        } catch (IOException e) {
-            System.out.println("! IO Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("! Other Error: " + e.getMessage());
-        }
-		if (document == null) {
-			System.out.println("! Script file check error");
-			return;
-		}
-		System.out.println("- Parsing script file");
-		Element rootElement = document.getDocumentElement();
-		boolean hasResourcePatch = hasChildNodeWithName(rootElement, "resource");
-		boolean hasDexPatch = hasChildNodeWithName(rootElement, "dex");
-		if (!hasResourcePatch && !hasDexPatch) {
-			System.out.println("! Don't have any patch");
-			return;
-		}
-		System.out.println("- Decoding APK file");
 		File tempDir = RandomNameUtil.randomTempDir();
-		if (!ApkTool.decodeResource(apkFile, tempDir)) {
-			System.out.println("! Unable to decode APK file");
+		DexFile dex = null;
+		boolean hasAnyResourcePatch = false;
+		boolean hasAnyDexPatch = false;
+		List<PatchInfo> patchInfos = new LinkedList<>();
+		int patchedCount = 0;
+		int skippedCount = 0;
+		
+		for (String string : scriptFiles) {
+			File scriptFile = new File(string);
+			System.out.println("- Start check script " + scriptFile.getAbsolutePath());
+			if (!scriptFile.exists()) {
+				System.out.println("! Script file not exists");
+				return;
+			}
+			File scriptDir = scriptFile.getParentFile();
+			if (!scriptFile.isFile()) {
+				System.out.println("! Script file is not a file");
+				return;
+			}
+			Document document = null;
+			try {
+	            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+	            factory.setValidating(false);
+	            factory.setNamespaceAware(true);
+	            DocumentBuilder builder = factory.newDocumentBuilder();
+	            document = builder.parse(scriptFile);
+	        } catch (SAXException e) {
+	            System.out.println("! Script file content if invalid: " + e.getMessage());
+	        } catch (IOException e) {
+	            System.out.println("! IO Error: " + e.getMessage());
+	        } catch (Exception e) {
+	            System.out.println("! Other Error: " + e.getMessage());
+	        }
+			if (document == null) {
+				System.out.println("! Script file check error");
+				return;
+			}
+			System.out.println("- Parsing script file");
+			Element rootElement = document.getDocumentElement();
+			boolean hasResourcePatch = hasChildNodeWithName(rootElement, "resource");
+			boolean hasDexPatch = hasChildNodeWithName(rootElement, "dex");
+			hasAnyResourcePatch = hasAnyResourcePatch || hasResourcePatch;
+			hasAnyDexPatch = hasAnyDexPatch || hasDexPatch;
+			if (!hasDexPatch && !hasResourcePatch) {
+				System.out.println("* This script file doesn't have any patch, skipping...");
+				skippedCount++;
+			} else {
+				patchInfos.add(new PatchInfo(hasResourcePatch, hasDexPatch, scriptDir, rootElement, scriptFile));
+			}
+		}
+		
+		if (hasAnyDexPatch || hasAnyResourcePatch) {
+			System.out.println("- Decoding APK file");
+			boolean decodeResult = false;
+			if (signSetting.equals("keep")) {
+				decodeResult = ApkTool.decodeResource(apkFile, tempDir, true);
+			} else {
+				decodeResult = ApkTool.decodeResource(apkFile, tempDir);
+			}
+			if (!decodeResult) {
+				System.out.println("! Unable to decode APK file");
+				return;
+			}
+			if (hasAnyDexPatch) {
+				System.out.println("- Loading dex");
+				try {
+					dex = MultiDexIO.readDexFile(true, apkFile, new BasicDexFileNamer(), null, null);
+				} catch (IOException e) {
+					System.out.println(e.getMessage());
+					System.out.println("! Unable to load dex");
+					return;
+				}
+				if (dex == null) {
+					System.out.println("! Unable to load dex");
+					return;
+				}
+			}
+		} else {
+			System.out.println("! No patch tasks in these script files");
 			return;
 		}
+		
+		DexContainer dexContainer = new DexContainer(dex);
+		for (PatchInfo patchInfo : patchInfos) {
+			System.out.println("- Doing patch " + patchInfo.getScriptFile().getAbsolutePath());
+			doPatch(patchInfo.isHasResourcePatch(), patchInfo.isHasDexPatch(), patchInfo.getRootElement(), tempDir, patchInfo.getScriptDir(), apkFile, dexContainer);
+			patchedCount++;
+		}
+		dex = dexContainer.get();
+		System.out.println("- All patch scripts have been completed");
+		System.out.println(String.format("- %d patched, %d skipped", patchedCount, skippedCount));
+		
+		if (hasAnyDexPatch) {
+			System.out.println("- Writing dex file");
+			try {
+				MultiDexIO.writeDexFile(true, tempDir, new BasicDexFileNamer(), dex, DexIO.DEFAULT_MAX_DEX_POOL_SIZE, null);
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.out.println("- Write dex file failed");
+			}
+		}
+		
+		System.out.println("- Building patched APK file");
+		File outDir = new File(apkFile.getName().substring(0, (apkFile.getName().lastIndexOf("."))) + "_patched-" + tempDir.getName().substring(15) + ".apk");
+		if (!ApkTool.build(tempDir, outDir, (signSetting.equals("keep") ? true : false))) {
+			System.out.println("! Unable to build APK file");
+			return;
+		}
+		System.out.println("- APK file saved to " + outDir.getAbsolutePath());
+		
+		System.out.println("- Cleaning");
+		clean();
+	}
+	
+	private void doPatch(boolean hasResourcePatch, boolean hasDexPatch, Element rootElement, File tempDir, File scriptDir, File apkFile, DexContainer dexContainer) {
+		DexFile dex = dexContainer.get();
 		if (hasResourcePatch) {
 			System.out.println("- Patching resource patchs");
 			NodeList resourceElements = rootElement.getElementsByTagName("resource");
@@ -273,19 +366,6 @@ public class Main {
 		}
 		if (hasDexPatch) {
 			System.out.println("- Patching dex patchs");
-			System.out.println("- Loading dex");
-			DexFile dex = null;
-			try {
-				dex = MultiDexIO.readDexFile(true, apkFile, new BasicDexFileNamer(), null, null);
-			} catch (IOException e) {
-				System.out.println(e.getMessage());
-				System.out.println("! Unable to load dex");
-				return;
-			}
-			if (dex == null) {
-				System.out.println("! Unable to load dex");
-				return;
-			}
 			NodeList dexElements = rootElement.getElementsByTagName("dex");
 			for (int i = 0; i < dexElements.getLength(); i++) {
 				Node node = dexElements.item(i);
@@ -324,9 +404,16 @@ public class Main {
 						}
 						String source = findSplit[0];
 						String suffix = findSplit[1];
-						boolean checksuffix = suffix.equals("0");
+						boolean disableSuffix = suffix.equals("0");
 						for (ClassDef classDef2 : classDefs) {
-							if (classDef2.getSourceFile().equals(source) && ((!checksuffix) || classDef2.getType().endsWith((suffix + ";")))) {
+							boolean suffixFlag = false;
+							if (disableSuffix && classDef2.getSourceFile() != null) {
+								int lastIndex = classDef2.getType().lastIndexOf("/");
+								suffixFlag = !classDef2.getType().substring((lastIndex != -1 ? lastIndex : 0), (classDef2.getType().length() - 1)).contains("$");
+							} else {
+								suffixFlag = classDef2.getType().endsWith(suffix + ";");
+							}
+							if (classDef2.getSourceFile() != null && classDef2.getSourceFile().equals(source) && suffixFlag) {
 								classDef = classDef2;
 							}
 						}
@@ -421,7 +508,7 @@ public class Main {
 													System.out.println("! A dex patch needs content but doesn't have, ignoring..");
 													return value;
 												}
-												return new MethodWrapper(value).apply(new ImmutableMethodImplementation(value.getParameters().size() + 1, Arrays.asList(
+												return new MethodWrapper(value).apply(new ImmutableMethodImplementation(value.getParameters().size() + 2, Arrays.asList(
 														new ImmutableInstruction11n(Opcode.CONST_4, 0, (textContent.equals("true") ? 1 : 0)), 
 														new ImmutableInstruction11x(Opcode.RETURN, 0)
 														), null, null)).build();
@@ -439,27 +526,11 @@ public class Main {
 								};
 							}
 						});
-						dex = dexRewriter.getDexFileRewriter().rewrite(dex);
+						dexContainer.set(dexRewriter.getDexFileRewriter().rewrite(dex));
 					}
 				}
 			}
-			System.out.println("- Writing dex file");
-			try {
-				MultiDexIO.writeDexFile(true, tempDir, new BasicDexFileNamer(), dex, DexIO.DEFAULT_MAX_DEX_POOL_SIZE, null);
-			} catch (Exception e) {
-				e.printStackTrace();
-				System.out.println("- Write dex file failed");
-			}
 		}
-		System.out.println("- Building patched APK file");
-		File outDir = new File(apkFile.getName().substring(0, (apkFile.getName().lastIndexOf("."))) + "_patched-" + tempDir.getName().substring(15) + ".apk");
-		if (!ApkTool.build(tempDir, outDir)) {
-			System.out.println("! Unable to build APK file");
-			return;
-		}
-		System.out.println("- APK file saved to " + outDir.getAbsolutePath());
-		System.out.println("- Cleaning");
-		clean();
 	}
 	
 	public static boolean replaceFile(File source, File destination) {
@@ -493,5 +564,111 @@ public class Main {
         }
         return false;
     }
+	
+	class PatchInfo {
+		boolean hasResourcePatch;
+		boolean hasDexPatch;
+		File scriptDir;
+		Element rootElement;
+		File scriptFile;
+
+		public PatchInfo(boolean hasResourcePatch, boolean hasDexPatch, File scriptDir, Element rootElement,
+				File scriptFile) {
+			this.hasResourcePatch = hasResourcePatch;
+			this.hasDexPatch = hasDexPatch;
+			this.scriptDir = scriptDir;
+			this.rootElement = rootElement;
+			this.scriptFile = scriptFile;
+		}
+
+		/**
+		 * @return hasResourcePatch
+		 */
+		public boolean isHasResourcePatch() {
+			return hasResourcePatch;
+		}
+
+		/**
+		 * @param hasResourcePatch 要设置的 hasResourcePatch
+		 */
+		public void setHasResourcePatch(boolean hasResourcePatch) {
+			this.hasResourcePatch = hasResourcePatch;
+		}
+
+		/**
+		 * @return hasDexPatch
+		 */
+		public boolean isHasDexPatch() {
+			return hasDexPatch;
+		}
+
+		/**
+		 * @param hasDexPatch 要设置的 hasDexPatch
+		 */
+		public void setHasDexPatch(boolean hasDexPatch) {
+			this.hasDexPatch = hasDexPatch;
+		}
+
+		/**
+		 * @return scriptDir
+		 */
+		public File getScriptDir() {
+			return scriptDir;
+		}
+
+		/**
+		 * @param scriptDir 要设置的 scriptDir
+		 */
+		public void setScriptDir(File scriptDir) {
+			this.scriptDir = scriptDir;
+		}
+
+		/**
+		 * @return rootElement
+		 */
+		public Element getRootElement() {
+			return rootElement;
+		}
+
+		/**
+		 * @param rootElement 要设置的 rootElement
+		 */
+		public void setRootElement(Element rootElement) {
+			this.rootElement = rootElement;
+		}
+
+		/**
+		 * @return scriptFile
+		 */
+		public File getScriptFile() {
+			return scriptFile;
+		}
+
+		/**
+		 * @param scriptFile 要设置的 scriptFile
+		 */
+		public void setScriptFile(File scriptFile) {
+			this.scriptFile = scriptFile;
+		}
+		
+	}
+	
+	public class DexContainer {
+		
+		DexFile dex;
+		
+		public DexContainer(DexFile dex) {
+			this.dex = dex;
+		}
+		
+		public DexFile get() {
+			return dex;
+		}
+		
+		public void set(DexFile dex) {
+			this.dex = dex;
+		}
+		
+	}
 	
 }

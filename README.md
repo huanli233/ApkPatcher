@@ -19,6 +19,10 @@ scripts/DisableLauncherRunMode.xml
 ```
 scripts/RemoveIllegalApp.xml
 ```
+修补小天才桌面启用九宫格应用列表:
+```
+scripts/Enable3x3.xml
+```
 
 # TODO
 - [ ] **Resource**
@@ -28,7 +32,7 @@ scripts/RemoveIllegalApp.xml
 - [x] **Dex**
     - [x] Find method and replace
         - [x] Find class with SourceFile
-- [ ] **Script**
-    - [ ] Multi script
-- [ ] **Other**
-    - [ ] Signing configs
+- [x] **Script**
+    - [x] Multi script
+- [x] **Other**
+    - [x] Sign config

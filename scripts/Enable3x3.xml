@@ -1,0 +1,4 @@
+<apkpatcher>
+	<dex>
+		<class type="source" find="SpanManager.java;0">
+			<patch type="precise" patchtype="RETURN-BOOL" find="a;V;Z;false">true</patch></class></dex></apkpatcher>
