@@ -4,7 +4,7 @@
   <groupId>com.huanli233</groupId>
   <artifactId>apkpatcher</artifactId>
   <name>ApkPatcher</name>
-  <version>1.2.0</version>
+  <version>1.2.2</version>
   <build>
     <plugins>
       <plugin>

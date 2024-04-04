@@ -46,6 +46,7 @@ import com.huanli233.apkpatcher.listener.MessageEventListener;
 import com.huanli233.apkpatcher.patcher.XmlPatcher;
 import com.huanli233.apkpatcher.utils.RandomNameUtil;
 
+import brut.androlib.Config;
 import brut.androlib.exceptions.AndrolibException;
 import brut.directory.DirectoryException;
 import lanchon.multidexlib2.BasicDexFileNamer;
@@ -54,7 +55,7 @@ import lanchon.multidexlib2.MultiDexIO;
 
 public class Main {
 	
-	public static final String VERSION = "1.2.0";
+	public static final String VERSION = "1.2.2";
 	
 	static MessageEventListener listener;
 	
@@ -90,22 +91,6 @@ public class Main {
 			new Main().run(args);
 		}
 		clean();
-	}
-	
-	@SuppressWarnings("unused")
-	private static void test() throws IOException {
-		// 读取DEX文件
-        File dexFile = new File("E:\\Desktop\\手表_11.6.15.apk"); // 替换为你的DEX文件路径
-        DexFile dex = MultiDexIO.readDexFile(true, dexFile, new BasicDexFileNamer(), null, null);
-
-        // 遍历DEX文件中的类
-        for (ClassDef classDef : dex.getClasses()) {
-            // 输出类名
-        	if (classDef.getSourceFile() != null && classDef.getSourceFile().contains("SpanManager")) {
-                System.out.println("Class: " + classDef.getType());
-        		System.out.println(classDef.getSourceFile());
-			}
-        }
 	}
 
 	public static void deleteDirectory(File directory) {
@@ -251,7 +236,14 @@ public class Main {
 			System.out.println("- Decoding APK file");
 			boolean decodeResult = false;
 			if (signSetting.equals("keep")) {
-				decodeResult = ApkTool.decodeResource(apkFile, tempDir, true);
+				boolean decodeResource = hasAnyResourcePatch;
+				decodeResult = ApkTool.decodeResource(apkFile, tempDir, (config) -> {
+					config.copyOriginalFiles = true;
+					config.forceDecodeManifest = Config.FORCE_DECODE_MANIFEST_FULL;
+					if (!decodeResource) {
+						config.decodeResources = Config.DECODE_RESOURCES_NONE;
+					}
+				});
 			} else {
 				decodeResult = ApkTool.decodeResource(apkFile, tempDir);
 			}

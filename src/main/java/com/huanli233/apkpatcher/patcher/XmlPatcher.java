@@ -3,6 +3,8 @@ package com.huanli233.apkpatcher.patcher;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -90,25 +92,7 @@ public class XmlPatcher {
                 }
             }
 		} else if (mode == MODE_REPLACE_EXISTS) {
-//			Node curXmlFile = doc.getDocumentElement();
-//			Element curNew = newElement;
-//			boolean flag = true;
-//			while (flag) {
-//				NodeList list = curXmlFile.getChildNodes();
-//				for (int i = 0; i < list.getLength(); i++) {
-//					Node node = list.item(i);
-//					if (nodeMatches(node, curNew)) {
-//						if (hasElementChild(curNew)) {
-//							curXmlFile = node;
-//							continue;
-//						} else {
-//							
-//						}
-//					}
-//				}
-//			}
-			// TODO
-			System.out.println("! REPLACE_EXISTS is not currently supported");
+			processElement(newElement, doc);
 			return;
 		}
         // 如果没有相同节点，则添加新节点到根节点下
@@ -183,6 +167,95 @@ public class XmlPatcher {
         } catch (TransformerException | IOException e) {
             e.printStackTrace();
         }
+    }
+    
+    public static void processElement(Element element, Document document) {
+        // 遍历传入的 Element 对象的所有分支的每一个末端节点
+        List<Node> terminalNodes = findTerminalNodes(element);
+        for (Node terminalNode : terminalNodes) {
+            // 查找在 Document 对象的根节点下与每一个末端节点路径相同的节点
+            Node correspondingNode = findCorrespondingNode(terminalNode, document.getDocumentElement());
+            // 若存在对应节点，则替换
+            if (correspondingNode != null) {
+                Node newNode = document.importNode(terminalNode, true);
+                correspondingNode.getParentNode().replaceChild(newNode, correspondingNode);
+            } else {
+                // 若不存在对应节点，则添加
+                Node parentNode = findParentNode(terminalNode, document.getDocumentElement());
+                if (parentNode != null) {
+                    Node newNode = document.importNode(terminalNode, true);
+                    parentNode.appendChild(newNode);
+                }
+            }
+        }
+    }
+
+    // 找到节点的所有分支的每一个末端节点
+    private static List<Node> findTerminalNodes(Node node) {
+        List<Node> terminals = new ArrayList<>();
+        findTerminalNodesRecursive(node, terminals);
+        return terminals;
+    }
+
+    private static void findTerminalNodesRecursive(Node node, List<Node> terminals) {
+        if (node.hasChildNodes()) {
+            for (Node child : getChildNodes(node)) {
+                findTerminalNodesRecursive(child, terminals);
+            }
+        } else {
+            terminals.add(node);
+        }
+    }
+
+    private static List<Node> getChildNodes(Node node) {
+        List<Node> children = new ArrayList<>();
+        for (Node child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
+            children.add(child);
+        }
+        return children;
+    }
+
+    // 在根节点下查找与给定节点路径相同的节点
+    private static Node findCorrespondingNode(Node node, Node rootNode) {
+        String path = getNodePath(node);
+        return findNodeByPath(path, rootNode);
+    }
+
+    // 获取节点路径
+    private static String getNodePath(Node node) {
+        StringBuilder pathBuilder = new StringBuilder();
+        Node currentNode = node;
+        while (currentNode.getParentNode() != null) {
+            pathBuilder.insert(0, "/" + currentNode.getNodeName());
+            currentNode = currentNode.getParentNode();
+        }
+        return pathBuilder.toString();
+    }
+
+    // 根据节点路径在根节点下查找节点
+    private static Node findNodeByPath(String path, Node rootNode) {
+        String[] nodeNames = path.split("/");
+        Node currentNode = rootNode;
+        for (String nodeName : nodeNames) {
+            if (nodeName.isEmpty()) continue;
+            boolean found = false;
+            for (Node child : getChildNodes(currentNode)) {
+                if (child.getNodeName().equals(nodeName)) {
+                    currentNode = child;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) return null;
+        }
+        return currentNode;
+    }
+
+    // 在根节点下查找给定节点的父节点
+    private static Node findParentNode(Node node, Node rootNode) {
+        String path = getNodePath(node);
+        String parentPath = path.substring(0, path.lastIndexOf("/" + node.getNodeName()));
+        return findNodeByPath(parentPath, rootNode);
     }
     
 }

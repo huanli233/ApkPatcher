@@ -30,9 +30,9 @@ scripts/Enable3x3.xml
 ```
 
 # TODO
-- [ ] **Resource**
+- [x] **Resource**
     - [x] XML patch
-        - [ ] Replace existing child nodes(likes Magisk's mount file)
+        - [x] replace existing child nodes(likes Magisk's mount file)
     - [x] Replace file
 - [x] **Dex**
     - [x] Find method and replace
@@ -41,3 +41,11 @@ scripts/Enable3x3.xml
     - [x] Multi script
 - [x] **Other**
     - [x] Sign config
+    
+# Resource folders implicit qualifiers
+Apktool:
+> Currently we have a mismatch between reading the folders and reading the qualifiers which leads to a mismatch between
+implicit qualifiers like version (-v4, v13, etc).
+
+I plan to disable the decoding resource option of Apktool when decoding Apk, and decode the required XML separately based on the patch script, replacing the original XML with the encoded XML after the patch is completed.
+This may take some time.

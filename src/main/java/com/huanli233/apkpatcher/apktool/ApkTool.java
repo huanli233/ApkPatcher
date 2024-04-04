@@ -13,13 +13,17 @@ import brut.directory.ExtFile;
 
 public class ApkTool {
 	
-	public static boolean decodeResource(File apkFile, File outDir, boolean copyOrigFile) {
+	public interface ConfigSetter {
+		public void setConfig(Config config);
+	}
+	
+	public static boolean decodeResource(File apkFile, File outDir, ConfigSetter setter) {
 		ExtFile extFile = new ExtFile(apkFile);
 		Config config = Config.getDefaultConfig();
 		try {
 			config.forceDelete = true;
 			config.setDecodeSources(Config.DECODE_SOURCES_NONE);
-			config.copyOriginalFiles = copyOrigFile;
+			setter.setConfig(config);
 		} catch (AndrolibException e) {
 			e.printStackTrace();
 			return false;
@@ -35,7 +39,7 @@ public class ApkTool {
 	}
 	
 	public static boolean decodeResource(File apkFile, File outDir) {
-		return decodeResource(apkFile, outDir, false);
+		return decodeResource(apkFile, outDir, (config) -> {});
 	}
 	
 	public static boolean build(File dir, File out, boolean copyOrigFile) {
