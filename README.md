@@ -47,5 +47,5 @@ Apktool:
 > Currently we have a mismatch between reading the folders and reading the qualifiers which leads to a mismatch between
 implicit qualifiers like version (-v4, v13, etc).
 
-I plan to disable the decoding resource option of Apktool when decoding Apk, and decode the required XML separately based on the patch script, replacing the original XML with the encoded XML after the patch is completed.
-This may take some time.
+I have decided to use another approach now, which is to modify the code in the ResourceDecoder section to record the pre decoding and post decoding paths, and then have ApkPatcher operate on this to change the res folder structure to its original state
+This may take some time too.
