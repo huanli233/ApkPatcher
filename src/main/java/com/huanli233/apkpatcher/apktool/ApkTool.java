@@ -17,18 +17,30 @@ public class ApkTool {
 		public void setConfig(Config config);
 	}
 	
-	public static boolean decodeResource(File apkFile, File outDir, ConfigSetter setter) {
+	public static ApkDecoder getDecoder(File apkFile, ConfigSetter setter) {
 		ExtFile extFile = new ExtFile(apkFile);
 		Config config = Config.getDefaultConfig();
+		config.forceDelete = true;
 		try {
-			config.forceDelete = true;
 			config.setDecodeSources(Config.DECODE_SOURCES_NONE);
-			setter.setConfig(config);
 		} catch (AndrolibException e) {
 			e.printStackTrace();
-			return false;
 		}
+		setter.setConfig(config);
 		ApkDecoder apkDecoder = new ApkDecoder(config, extFile);
+		return apkDecoder;
+	}
+	
+	public static boolean decode(File apkFile, File outDir, ConfigSetter setter) {
+		ApkDecoder apkDecoder = getDecoder(apkFile, setter);
+		return decode(apkDecoder, outDir);
+	}
+	
+	public static boolean decode(File apkFile, File outDir) {
+		return decode(apkFile, outDir, (config) -> {});
+	}
+	
+	public static boolean decode(ApkDecoder apkDecoder, File outDir) {
 		try {
 			apkDecoder.decode(outDir);
 		} catch (AndrolibException | DirectoryException | IOException e) {
@@ -36,10 +48,6 @@ public class ApkTool {
 			return false;
 		}
 		return true;
-	}
-	
-	public static boolean decodeResource(File apkFile, File outDir) {
-		return decodeResource(apkFile, outDir, (config) -> {});
 	}
 	
 	public static boolean build(File dir, File out, boolean copyOrigFile) {

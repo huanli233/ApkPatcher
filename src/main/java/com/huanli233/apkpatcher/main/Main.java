@@ -2,11 +2,15 @@ package com.huanli233.apkpatcher.main;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.ErrorManager;
 import java.util.logging.Formatter;
@@ -40,12 +44,14 @@ import com.android.tools.smali.dexlib2.rewriter.Rewriter;
 import com.android.tools.smali.dexlib2.rewriter.RewriterModule;
 import com.android.tools.smali.dexlib2.rewriter.Rewriters;
 import com.huanli233.apkpatcher.apktool.ApkTool;
+import com.huanli233.apkpatcher.apktool.ApkTool.ConfigSetter;
 import com.huanli233.apkpatcher.dexlib2.MethodWrapper;
 import com.huanli233.apkpatcher.event.MessageEvent;
 import com.huanli233.apkpatcher.listener.MessageEventListener;
 import com.huanli233.apkpatcher.patcher.XmlPatcher;
 import com.huanli233.apkpatcher.utils.RandomNameUtil;
 
+import brut.androlib.ApkDecoder;
 import brut.androlib.Config;
 import brut.androlib.exceptions.AndrolibException;
 import brut.directory.DirectoryException;
@@ -55,7 +61,9 @@ import lanchon.multidexlib2.MultiDexIO;
 
 public class Main {
 	
-	public static final String VERSION = "1.2.2";
+	public static final String VERSION = "1.2.5";
+	
+	public static Map<String, String> fileMapping = new HashMap<>();
 	
 	static MessageEventListener listener;
 	
@@ -164,6 +172,20 @@ public class Main {
 		System.out.println("    keep - Do not modify the original signature information");
 	}
 	
+	public static Object getFieldValue(Object obj, String fieldName) throws NoSuchFieldException, IllegalAccessException {
+        // 获取对象的Class对象
+        Class<?> clazz = obj.getClass();
+        
+        // 在Class对象中查找指定名称的字段
+        Field field = clazz.getDeclaredField(fieldName);
+        
+        // 设置字段的访问权限为可访问，即使是私有字段也可以访问
+        field.setAccessible(true);
+        
+        // 返回字段的值
+        return field.get(obj);
+    }
+	
 	public void run(String[] args) {
 		String[] scriptFiles = args[0].split(";");
 		File apkFile = new File(args[1]);
@@ -232,24 +254,28 @@ public class Main {
 			}
 		}
 		
+		String signString = signSetting;
+		boolean resourceDecode = hasAnyResourcePatch;
+		ApkDecoder apkDecoder = ApkTool.getDecoder(apkFile, new ConfigSetter() {
+			@Override
+			public void setConfig(Config config) {
+				config.copyOriginalFiles = signString.equals("keep");
+				config.forceDecodeManifest = Config.FORCE_DECODE_MANIFEST_FULL;
+				if (!resourceDecode) {
+					config.decodeResources = Config.DECODE_RESOURCES_NONE;
+				}
+			}
+		});
 		if (hasAnyDexPatch || hasAnyResourcePatch) {
 			System.out.println("- Decoding APK file");
-			boolean decodeResult = false;
-			if (signSetting.equals("keep")) {
-				boolean decodeResource = hasAnyResourcePatch;
-				decodeResult = ApkTool.decodeResource(apkFile, tempDir, (config) -> {
-					config.copyOriginalFiles = true;
-					config.forceDecodeManifest = Config.FORCE_DECODE_MANIFEST_FULL;
-					if (!decodeResource) {
-						config.decodeResources = Config.DECODE_RESOURCES_NONE;
-					}
-				});
-			} else {
-				decodeResult = ApkTool.decodeResource(apkFile, tempDir);
-			}
+			boolean decodeResult = ApkTool.decode(apkDecoder, tempDir);
 			if (!decodeResult) {
 				System.out.println("! Unable to decode APK file");
 				return;
+			}
+			if (hasAnyResourcePatch) {
+				System.out.println("- Moving res");
+				moveFiles(fileMapping, tempDir);
 			}
 			if (hasAnyDexPatch) {
 				System.out.println("- Loading dex");
@@ -300,6 +326,7 @@ public class Main {
 		
 		System.out.println("- Cleaning");
 		clean();
+		System.out.println("- Done!");
 	}
 	
 	private void doPatch(boolean hasResourcePatch, boolean hasDexPatch, Element rootElement, File tempDir, File scriptDir, File apkFile, DexContainer dexContainer) {
@@ -312,6 +339,7 @@ public class Main {
 				NodeList patchs = node.getChildNodes();
 				for (int j = 0; j < patchs.getLength(); j++) {
 					Node patch = patchs.item(j);
+					if (!(patch instanceof Element)) continue;
 					Element element = (Element) patch;
 					if (!element.hasAttribute("path")) {
 						System.out.println("! A patch doesn't have attribute 'path'");
@@ -644,6 +672,45 @@ public class Main {
 		}
 		
 	}
+	
+	public static void moveFiles(Map<String, String> pathMap, File workDir) {
+        for (Map.Entry<String, String> entry : pathMap.entrySet()) {
+            String sourcePath = entry.getKey();
+            String destinationPath = entry.getValue();
+
+            File sourceFile = new File(workDir, sourcePath);
+            File destinationFile = new File(workDir, destinationPath);
+
+            if (!sourceFile.exists()) {
+            	int index = sourcePath.lastIndexOf(".");
+            	sourceFile = new File(workDir, sourcePath.substring(0, index) + ".9" + sourcePath.substring(index));
+            	if (!sourceFile.exists()) {
+            		System.out.println("* Source file does not exist: " + sourceFile.getPath());
+                    continue;
+				}
+            }
+
+            if (!destinationFile.exists()) {
+                // If destination path does not exist, create the directory
+                destinationFile.getParentFile().mkdirs();
+            }
+
+            try {
+                Path source = sourceFile.toPath();
+                Path destination = destinationFile.toPath();
+                
+                if (destinationFile.isDirectory()) {
+                    // If destination is a directory, resolve it with source file name
+                    destination = destination.resolve(sourceFile.getName());
+                }
+                
+                Files.move(source, destination, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                System.out.println("! Error moving file from " + sourcePath + " to " + destinationPath + ": " + e.getMessage());
+            }
+        }
+    }
+
 	
 	public class DexContainer {
 		

@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.huanli233</groupId>
   <artifactId>apkpatcher</artifactId>
-  <version>1.2.2</version>
+  <version>1.2.5</version>
   <name>ApkPatcher</name>
   
   <repositories>
@@ -42,6 +42,18 @@
                 <checksumPolicy>fail</checksumPolicy>
             </snapshots>
         </repository>
+        <repository>
+            <id>jitpack</id>
+            <url>https://jitpack.io</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+                <checksumPolicy>fail</checksumPolicy>
+            </snapshots>
+        </repository>
     </repositories>
 
   
@@ -67,6 +79,11 @@
   		<groupId>com.huanli233</groupId>
   		<artifactId>multidexlib2</artifactId>
   		<version>3.0.3.r2</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.github.xgouchet</groupId>
+  		<artifactId>AXML</artifactId>
+  		<version>1.0.1</version>
   	</dependency>
   </dependencies>
   

@@ -29,6 +29,35 @@ scripts/RemoveIllegalApp.xml
 scripts/Enable3x3.xml
 ```
 
+# Script
+脚本文件使用 XML 格式
+```xml
+<apkpatcher>
+	<!-- Resource 修补 -->
+	<resource>
+		<!-- 修改 XML 内容 -->
+		<patch type="xml" path="path/to/xmlfile.xml">
+			<example>123</example>
+		</patch>
+		<!-- 替换文件 -->
+		<patch type="replace" path="path/to/file">path/to/my/file</patch>
+	</resource>
+	<!-- Dex 类方法修补 -->
+	<dex>
+		<!-- 提供准确的类名查找类 -->
+		<class type="precise" find="com.xtc.i3launcher.duration.AppProcessManager$1">
+			<!-- 提供准确的方法信息：[方法名;参数类型(用","分隔);返回类型;是否为static] 并修改其为RETURN-VOID -->
+			<patch patchtype="RETURN-VOID" type="precise" find="onValidate;Ljava/lang/String,Z;V;false"></patch>
+		</class>
+		<!-- 提供类的SourceFile的值查找类，并提供类名的后缀(0就是类名不含$) -->
+		<class type="source" find="SpanManager.java;0">
+			<!-- 提供准确的方法信息 并修改其为RETURN-BOOL，返回true -->
+			<patch type="precise" patchtype="RETURN-BOOL" find="a;V;Z;false">true</patch>
+		</class>
+	</dex>
+</apkpatcher>
+```
+
 # TODO
 - [x] **Resource**
     - [x] XML patch
@@ -47,5 +76,4 @@ Apktool:
 > Currently we have a mismatch between reading the folders and reading the qualifiers which leads to a mismatch between
 implicit qualifiers like version (-v4, v13, etc).
 
-I have decided to use another approach now, which is to modify the code in the ResourceDecoder section to record the pre decoding and post decoding paths, and then have ApkPatcher operate on this to change the res folder structure to its original state
-This may take some time too.
+I modify the code in the ResourceDecoder section to record the pre decoding and post decoding paths, and then have ApkPatcher operate on this to change the res folder structure to its original state.
