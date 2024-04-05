@@ -61,7 +61,7 @@ import lanchon.multidexlib2.MultiDexIO;
 
 public class Main {
 	
-	public static final String VERSION = "1.2.5";
+	public static final String VERSION = "1.2.7";
 	
 	public static Map<String, String> fileMapping = new HashMap<>();
 	
@@ -317,7 +317,7 @@ public class Main {
 		}
 		
 		System.out.println("- Building patched APK file");
-		File outDir = new File(apkFile.getName().substring(0, (apkFile.getName().lastIndexOf("."))) + "_patched-" + tempDir.getName().substring(15) + ".apk");
+		File outDir = new File(apkFile.getName().substring(0, (apkFile.getName().lastIndexOf(".") != -1 ? apkFile.getName().lastIndexOf(".") : (apkFile.getName().length() - 1))) + "_patched-" + tempDir.getName().substring(15) + ".apk");
 		if (!ApkTool.build(tempDir, outDir, (signSetting.equals("keep") ? true : false))) {
 			System.out.println("! Unable to build APK file");
 			return;
@@ -682,6 +682,7 @@ public class Main {
             File destinationFile = new File(workDir, destinationPath);
 
             if (!sourceFile.exists()) {
+            	// .9.png
             	int index = sourcePath.lastIndexOf(".");
             	sourceFile = new File(workDir, sourcePath.substring(0, index) + ".9" + sourcePath.substring(index));
             	if (!sourceFile.exists()) {
