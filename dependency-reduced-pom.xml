@@ -4,7 +4,7 @@
   <groupId>com.huanli233</groupId>
   <artifactId>apkpatcher</artifactId>
   <name>ApkPatcher</name>
-  <version>1.2.2</version>
+  <version>1.2.7</version>
   <build>
     <plugins>
       <plugin>
@@ -98,6 +98,15 @@
       </snapshots>
       <id>google</id>
       <url>https://dl.google.com/dl/android/maven2/</url>
+    </repository>
+    <repository>
+      <releases />
+      <snapshots>
+        <updatePolicy>always</updatePolicy>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
+      <id>jitpack</id>
+      <url>https://jitpack.io</url>
     </repository>
   </repositories>
   <properties>

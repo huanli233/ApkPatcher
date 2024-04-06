@@ -1,0 +1,12 @@
+<apkpatch>
+  <resource>
+  	<patch type="xml" mode="REPLACE_EXISTS" path="res/values/styles.xml">
+	  <style name="Theme">
+		<item name="windowSwipeToDismiss">false</item>
+	  </style>
+    </patch>
+    <patch type="xml" path="res/values/bools.xml">
+	  <bool name="config_windowSwipeToDismiss">false</bool>
+    </patch>
+  </resource>
+</apkpatch>

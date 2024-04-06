@@ -3,8 +3,9 @@ package com.huanli233.apkpatcher.patcher;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -27,7 +28,7 @@ public class XmlPatcher {
 	public static final int MODE_FULL_REPLACE = 1;
 	
 	public static boolean patch(File dir, Element patchElement, String path) {
-		int mode = MODE_REPLACE_EXISTS;
+		int mode = MODE_FULL_REPLACE;
 		if (patchElement.hasAttribute("mode")) {
 			switch (patchElement.getAttribute("mode")) {
 			case "0":
@@ -51,12 +52,16 @@ public class XmlPatcher {
 		try {
 			Document doc = readXMLFile(patchFile);
 			NodeList nodeList = patchElement.getChildNodes();
-			for (int i = 0; i < nodeList.getLength(); i++) {
-				if (!(nodeList.item(i) instanceof Element)) {
-					continue;
+			if (mode == MODE_REPLACE_EXISTS) {
+				writeElementToXMLFile(doc, patchElement, mode);
+			} else {
+				for (int i = 0; i < nodeList.getLength(); i++) {
+					if (!(nodeList.item(i) instanceof Element)) {
+						continue;
+					}
+					Element element = (Element) nodeList.item(i);
+					writeElementToXMLFile(doc, element, mode);
 				}
-				Element element = (Element) nodeList.item(i);
-				writeElementToXMLFile(doc, element, mode);
 			}
 			writeDocumentToFile(doc, patchFile);
 		} catch (SAXException e) {
@@ -78,7 +83,7 @@ public class XmlPatcher {
 
     private static void writeElementToXMLFile(Document doc, Element newElement, int mode) {
     	// 导入新Element对象到当前文档中
-        Node importedNode = doc.importNode(newElement, true);
+        Element importedNode = (Element) doc.importNode(newElement, true);
         NodeList nodeList = doc.getElementsByTagName(newElement.getTagName());
         if (mode == MODE_FULL_REPLACE) {
         	// 遍历相同节点名称的所有节点
@@ -92,7 +97,7 @@ public class XmlPatcher {
                 }
             }
 		} else if (mode == MODE_REPLACE_EXISTS) {
-			processElement(newElement, doc);
+			replaceOrAddMatchingNodes(newElement, doc);
 			return;
 		}
         // 如果没有相同节点，则添加新节点到根节点下
@@ -119,18 +124,6 @@ public class XmlPatcher {
         // 检查节点属性是否相同
         if (!attributesMatch(node1, node2)) {
             return false;
-        }
-        // 检查子节点数量是否相同
-        if (node1.getChildNodes().getLength() != node2.getChildNodes().getLength()) {
-            return false;
-        }
-        // 递归检查子节点是否相同
-        NodeList children1 = node1.getChildNodes();
-        NodeList children2 = node2.getChildNodes();
-        for (int i = 0; i < children1.getLength(); i++) {
-            if (!nodeMatches(children1.item(i), children2.item(i))) {
-                return false;
-            }
         }
         return true;
     }
@@ -169,93 +162,102 @@ public class XmlPatcher {
         }
     }
     
-    public static void processElement(Element element, Document document) {
-        // 遍历传入的 Element 对象的所有分支的每一个末端节点
-        List<Node> terminalNodes = findTerminalNodes(element);
-        for (Node terminalNode : terminalNodes) {
-            // 查找在 Document 对象的根节点下与每一个末端节点路径相同的节点
-            Node correspondingNode = findCorrespondingNode(terminalNode, document.getDocumentElement());
-            // 若存在对应节点，则替换
-            if (correspondingNode != null) {
-                Node newNode = document.importNode(terminalNode, true);
-                correspondingNode.getParentNode().replaceChild(newNode, correspondingNode);
-            } else {
-                // 若不存在对应节点，则添加
-                Node parentNode = findParentNode(terminalNode, document.getDocumentElement());
-                if (parentNode != null) {
-                    Node newNode = document.importNode(terminalNode, true);
-                    parentNode.appendChild(newNode);
+    public static void replaceOrAddMatchingNodes(Element element, Document document) {
+        NodeList childNodes = element.getChildNodes();
+        for (int i = 0; i < childNodes.getLength(); i++) {
+            Node childNode = childNodes.item(i);
+            if (childNode instanceof Element) {
+                Element childElement = (Element) childNode;
+                if (hasElementChild(childElement)) {
+                    // 递归调用处理子节点
+                    replaceOrAddMatchingNodes(childElement, document);
+                } else {
+                    // 处理末端节点
+                    replaceOrAddNode(childElement, document);
                 }
             }
         }
     }
 
-    // 找到节点的所有分支的每一个末端节点
-    private static List<Node> findTerminalNodes(Node node) {
-        List<Node> terminals = new ArrayList<>();
-        findTerminalNodesRecursive(node, terminals);
-        return terminals;
-    }
-
-    private static void findTerminalNodesRecursive(Node node, List<Node> terminals) {
-        if (node.hasChildNodes()) {
-            for (Node child : getChildNodes(node)) {
-                findTerminalNodesRecursive(child, terminals);
-            }
+    private static void replaceOrAddNode(Element childElement, Document document) {
+        String path = getNodePath(childElement);
+        Element existingNode = findMatchingNode(path, document.getDocumentElement());
+        if (existingNode != null) {
+            // 替换已存在的节点
+            document.getDocumentElement().replaceChild(childElement, existingNode);
         } else {
-            terminals.add(node);
+            // 添加新节点
+            Element parentNode = findOrCreateParentNode(path, document.getDocumentElement(), document);
+            parentNode.appendChild(document.importNode(childElement, true));
         }
     }
+    
+    private static String getName() {
+    	return UUID.randomUUID().toString().replace("-", "");
+	}
 
-    private static List<Node> getChildNodes(Node node) {
-        List<Node> children = new ArrayList<>();
-        for (Node child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
-            children.add(child);
-        }
-        return children;
-    }
-
-    // 在根节点下查找与给定节点路径相同的节点
-    private static Node findCorrespondingNode(Node node, Node rootNode) {
-        String path = getNodePath(node);
-        return findNodeByPath(path, rootNode);
-    }
-
-    // 获取节点路径
-    private static String getNodePath(Node node) {
+    static Map<String, Element> eleMap = new HashMap<>();
+    private static String getNodePath(Element element) {
         StringBuilder pathBuilder = new StringBuilder();
-        Node currentNode = node;
-        while (currentNode.getParentNode() != null) {
-            pathBuilder.insert(0, "/" + currentNode.getNodeName());
+        Node currentNode = element;
+        while (currentNode.getParentNode() instanceof Element) {
             currentNode = currentNode.getParentNode();
+            String string = getName();
+            eleMap.put(string, (Element) currentNode);
+            pathBuilder.insert(0, "/" + string);
         }
         return pathBuilder.toString();
     }
 
-    // 根据节点路径在根节点下查找节点
-    private static Node findNodeByPath(String path, Node rootNode) {
-        String[] nodeNames = path.split("/");
-        Node currentNode = rootNode;
-        for (String nodeName : nodeNames) {
-            if (nodeName.isEmpty()) continue;
-            boolean found = false;
-            for (Node child : getChildNodes(currentNode)) {
-                if (child.getNodeName().equals(nodeName)) {
-                    currentNode = child;
-                    found = true;
-                    break;
-                }
+    private static Element findMatchingNode(String path, Element rootNode) {
+        String[] segments = path.split("/");
+        Element currentNode = rootNode;
+        for (String segment : segments) {
+            NodeList nodeList = currentNode.getElementsByTagName(segment);
+            if (nodeList.getLength() > 0) {
+                currentNode = (Element) nodeList.item(0);
+            } else {
+                return null; // 没有找到匹配的节点
             }
-            if (!found) return null;
         }
         return currentNode;
     }
 
-    // 在根节点下查找给定节点的父节点
-    private static Node findParentNode(Node node, Node rootNode) {
-        String path = getNodePath(node);
-        String parentPath = path.substring(0, path.lastIndexOf("/" + node.getNodeName()));
-        return findNodeByPath(parentPath, rootNode);
+    private static Element findOrCreateParentNode(String path, Element rootNode, Document document) {
+        String[] segments = path.split("/");
+        Element currentNode = rootNode;
+        boolean flag = false;
+        for (int i = 0; i < segments.length; i++) {
+            String segment = segments[i];
+            if (segment.equals("")) {
+				continue;
+			}
+            Element element = eleMap.get(segment);
+            if (element.getTagName().equals("patch")) {
+				flag = true;
+				continue;
+			}
+            if (!flag) {
+				continue;
+			}
+            NodeList nodeList = currentNode.getChildNodes();
+            boolean flag1 = true;
+            for (int j = 0; j < nodeList.getLength(); j++) {
+				Node node = nodeList.item(j);
+				if (node instanceof Element) {
+					if (nodeMatches(element, node)) {
+						flag1 = false;
+						currentNode = (Element) node;
+					}
+				}
+            }
+            if (flag1) {
+            	Element importElement = (Element) document.importNode(element, true);
+				currentNode.appendChild(importElement);
+				currentNode = element;
+			}
+        }
+        return currentNode;
     }
     
 }
