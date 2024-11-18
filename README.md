@@ -1,6 +1,9 @@
 # ApkPatcher
 修补 APK 进行一些特定寻找与修改操作并重新打包为 APK 的工具。
 
+由于在此项目开始编写时经验不足，导致在设计、代码质量上有着诸多问题，故此项目已停止维护。我计划在最近创建一个用处差不多的新项目，但有着更好的 API 设计和实现细节。
+[Re-ApkPatcher](https://github.com/huanli233/Re-ApkPatcher)
+
 # Usage
 ```
 apkpatcher <Script> <APK> [Sign Option]
